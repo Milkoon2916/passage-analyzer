@@ -12,6 +12,7 @@
   textarea { width: 100%; height: 220px; padding: 10px; font-size: 14px; box-sizing: border-box; margin-top: 6px; }
   .key-row { display: flex; gap: 6px; margin-top: 6px; }
   input[type=password], input[type=text] { flex: 1; width: 100%; padding: 9px; font-size: 14px; box-sizing: border-box; margin-top: 6px; }
+  select { width: 100%; padding: 9px; font-size: 14px; box-sizing: border-box; margin-top: 6px; }
   .key-row button { padding: 0 12px; font-size: 14px; }
   button.primary { margin-top: 16px; padding: 10px 20px; font-size: 15px; background: #17324d; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
   button.primary:disabled { background: #999; cursor: default; }
@@ -35,6 +36,14 @@
   </div>
   <div class="key-note">키는 이 브라우저에만 저장되며 서버에 파일로 남지 않습니다.</div>
 
+  <label>사용할 모델</label>
+  <select id="modelSelect">
+    <option value="gemini-2.5-flash">Gemini 2.5 Flash (무료 등급 가능, 빠름)</option>
+    <option value="gemini-2.5-pro">Gemini 2.5 Pro (결제 등록 필요, 품질 더 좋음)</option>
+    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (무료 등급 가장 넉넉함, 품질은 낮음)</option>
+  </select>
+  <div class="key-note">본인의 API 키가 유료 등록돼 있다면 Pro를, 무료 등급이라면 Flash를 선택하세요.</div>
+
   <label>영어 지문</label>
   <textarea id="passage" placeholder="영어 지문을 여기에 붙여넣으세요..."></textarea>
 
@@ -48,17 +57,24 @@
 
   <script>
     const KEY_STORAGE = "passage-analyzer-gemini-api-key";
+    const MODEL_STORAGE = "passage-analyzer-gemini-model";
     const apiKeyEl = document.getElementById('apiKey');
     const toggleKeyEl = document.getElementById('toggleKey');
+    const modelSelectEl = document.getElementById('modelSelect');
     const passageEl = document.getElementById('passage');
     const btn = document.getElementById('btn');
     const statusEl = document.getElementById('status');
     const downloadEl = document.getElementById('download');
 
-    // 저장된 키 불러오기
+    // 저장된 키/모델 선택 불러오기
     apiKeyEl.value = localStorage.getItem(KEY_STORAGE) || '';
     apiKeyEl.addEventListener('input', () => {
       localStorage.setItem(KEY_STORAGE, apiKeyEl.value.trim());
+    });
+    const savedModel = localStorage.getItem(MODEL_STORAGE);
+    if (savedModel) modelSelectEl.value = savedModel;
+    modelSelectEl.addEventListener('change', () => {
+      localStorage.setItem(MODEL_STORAGE, modelSelectEl.value);
     });
     toggleKeyEl.addEventListener('click', () => {
       apiKeyEl.type = apiKeyEl.type === 'password' ? 'text' : 'password';
@@ -134,8 +150,9 @@
         const cfg = await cfgRes.json();
 
         statusEl.textContent = 'AI가 지문을 분석하고 있습니다… (20~90초 정도 걸릴 수 있어요)';
+        const selectedModel = modelSelectEl.value;
         const analysis = await callGeminiDirectly(
-          apiKey, cfg.system_prompt, cfg.model, cfg.max_tokens, passage, targetGrammar
+          apiKey, cfg.system_prompt, selectedModel, cfg.max_tokens, passage, targetGrammar
         );
 
         statusEl.textContent = 'PDF로 렌더링하는 중...';
