@@ -7,7 +7,7 @@ Gemini API가 반환해야 하는 구조화된 분석 결과의 스키마.
 """
 from __future__ import annotations
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Token(BaseModel):
@@ -16,6 +16,9 @@ class Token(BaseModel):
     text: str  # 원문 그대로의 영어 단어/구 (또는 일반 텍스트 조각)
     tag_class: Optional[Literal["g", "v", "gv"]] = None  # type == "tag"일 때만
     caption: Optional[str] = None  # type == "tag"일 때만, 2-6자 한글 캡션
+
+
+_VALID_NOTE_CATEGORIES = {"comprehension", "grammar", "blank", "writing", "implication", "theme"}
 
 
 class Note(BaseModel):
@@ -28,6 +31,15 @@ class Note(BaseModel):
         "theme",          # 주제/요지
     ]
     body: str  # 2-4문장, 캐주얼한 tutor 어투
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def _fallback_unknown_category(cls, v):
+        # Gemini가 가끔 badge 값("target" 등)을 category에 잘못 넣는 경우가 있어,
+        # 전체 렌더링이 깨지지 않도록 알 수 없는 값은 "grammar"로 안전하게 대체한다.
+        if v not in _VALID_NOTE_CATEGORIES:
+            return "grammar"
+        return v
 
 
 class Sentence(BaseModel):
