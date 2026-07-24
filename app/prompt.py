@@ -27,6 +27,10 @@ SYSTEM_PROMPT = """당신은 한국 수능/CSAT 영어 독해 지문을 분석�
   - caption에는 2-6자 정도의 짧은 한글 설명을 넣습니다.
 - type="conn": 논리 연결어 (However, Since, Consequently, In fact, As a result 등). caption 불필요.
 - type="hl": 문장에서 가장 핵심적인 구 (문장당 0-1개, 신중히 사용). caption 불필요.
+- **주의**: "hl"과 "conn"은 tokens[].type에만 쓰는 값입니다. tokens[].tag_class는
+  type="tag"일 때만 존재하며 반드시 "g", "v", "gv" 중 하나여야 합니다.
+  tag_class에 "hl"이나 "conn"을 넣는 것은 명백한 오류이니 절대 넣지 마세요.
+  (핵심구를 강조하고 싶으면 type="hl"로, tag_class는 아예 넣지 마세요.)
 - 밀도: 문법/어휘적으로 설명할 가치가 있는 단어는 거의 다 태그. **문장당 최소 2개 이상의
   type="tag" 태그를 반드시 포함해야 하며, 보통은 3-8개가 자연스럽습니다.** 0개 또는 1개인
   문장이 나오면 안 됩니다 (아주 짧은 단문 제외). 관사나 기본 대명사처럼 설명할 필요 없는
