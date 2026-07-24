@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>영어 지문 구문분석 자동 생성기</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
+  h1 { font-size: 20px; }
+  .hint { color: #666; font-size: 13px; line-height: 1.5; }
+  label { display: block; margin-top: 18px; font-size: 14px; font-weight: 600; }
+  textarea { width: 100%; height: 220px; padding: 10px; font-size: 14px; box-sizing: border-box; margin-top: 6px; }
+  .key-row { display: flex; gap: 6px; margin-top: 6px; }
+  input[type=password], input[type=text] { flex: 1; width: 100%; padding: 9px; font-size: 14px; box-sizing: border-box; margin-top: 6px; }
+  .key-row button { padding: 0 12px; font-size: 14px; }
+  button.primary { margin-top: 16px; padding: 10px 20px; font-size: 15px; background: #17324d; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  button.primary:disabled { background: #999; cursor: default; }
+  #status { margin-top: 14px; font-size: 14px; color: #555; white-space: pre-wrap; }
+  #download { display: none; margin-top: 14px; }
+  .key-note { font-size: 12px; color: #888; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>영어 지문 구문분석 자동 생성기</h1>
+  <p class="hint">
+    지문을 붙여넣고 본인의 Anthropic API 키로 분석합니다.
+    키는 이 브라우저에만 저장되며 서버로 전송되지 않습니다.
+    <a href="https://console.anthropic.com/settings/keys" target="_blank">키 발급받기 ↗</a>
+  </p>
+
+  <label>Anthropic API 키</label>
+  <div class="key-row">
+    <input type="password" id="apiKey" placeholder="sk-ant-...">
+    <button id="toggleKey" type="button">👁</button>
+  </div>
+  <div class="key-note">키는 이 브라우저에만 저장되며 서버에 파일로 남지 않습니다.</div>
+
+  <label>영어 지문</label>
+  <textarea id="passage" placeholder="영어 지문을 여기에 붙여넣으세요..."></textarea>
+
+  <label>목표 어법 (선택)</label>
+  <input type="text" id="targetGrammar" placeholder="예: 가정법 도치, 분사구문">
+  <div class="key-note">입력하면 해당 문법이 나타나는 문장에 🎯 표시와 어법 설명이 추가돼요.</div>
+
+  <button class="primary" id="btn">분석하기</button>
+  <div id="status"></div>
+  <a id="download" href="#" target="_blank">📄 PDF 다운로드</a>
+
+  <script>
+    const KEY_STORAGE = "passage-analyzer-api-key";
+    const apiKeyEl = document.getElementById('apiKey');
+    const toggleKeyEl = document.getElementById('toggleKey');
+    const passageEl = document.getElementById('passage');
+    const btn = document.getElementById('btn');
+    const statusEl = document.getElementById('status');
+    const downloadEl = document.getElementById('download');
+
+    // 저장된 키 불러오기
+    apiKeyEl.value = localStorage.getItem(KEY_STORAGE) || '';
+    apiKeyEl.addEventListener('input', () => {
+      localStorage.setItem(KEY_STORAGE, apiKeyEl.value.trim());
+    });
+    toggleKeyEl.addEventListener('click', () => {
+      apiKeyEl.type = apiKeyEl.type === 'password' ? 'text' : 'password';
+    });
+
+    function stripCodeFence(text) {
+      let t = text.trim();
+      if (t.startsWith('```')) {
+        t = t.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+      }
+      return t;
+    }
+
+    async function callClaudeDirectly(apiKey, systemPrompt, model, maxTokens, passageText, targetGrammar) {
+      const lines = ['다음 지문을 분석해줘 (지문 번호: 1):'];
+      if (targetGrammar && targetGrammar.trim()) {
+        lines.push(`목표 어법: ${targetGrammar.trim()}`);
+      }
+      lines.push('');
+      lines.push(passageText.trim());
+      const userMessage = lines.join('\n');
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: model,
+          max_tokens: maxTokens,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMessage }],
+        }),
+      });
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        const msg = errBody?.error?.message || `Anthropic API 오류 (${res.status})`;
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+      const rawText = data.content
+        .filter(b => b.type === 'text')
+        .map(b => b.text)
+        .join('');
+      return JSON.parse(stripCodeFence(rawText));
+    }
+
+    btn.addEventListener('click', async () => {
+      const apiKey = apiKeyEl.value.trim();
+      const passage = passageEl.value.trim();
+      const targetGrammar = document.getElementById('targetGrammar').value;
+
+      if (!apiKey) { statusEl.textContent = 'Anthropic API 키를 입력해주세요.'; return; }
+      if (!passage) { statusEl.textContent = '지문을 입력해주세요.'; return; }
+
+      btn.disabled = true;
+      downloadEl.style.display = 'none';
+
+      try {
+        statusEl.textContent = '분석 설정을 불러오는 중...';
+        const cfgRes = await fetch('/prompt-config');
+        if (!cfgRes.ok) throw new Error('서버에서 프롬프트 설정을 가져오지 못했습니다.');
+        const cfg = await cfgRes.json();
+
+        statusEl.textContent = 'AI가 지문을 분석하고 있습니다… (20~90초 정도 걸릴 수 있어요)';
+        const analysis = await callClaudeDirectly(
+          apiKey, cfg.system_prompt, cfg.model, cfg.max_tokens, passage, targetGrammar
+        );
+
+        statusEl.textContent = 'PDF로 렌더링하는 중...';
+        const renderRes = await fetch('/render', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(analysis),
+        });
+        if (!renderRes.ok) {
+          const err = await renderRes.json().catch(() => ({}));
+          throw new Error(err.detail ? JSON.stringify(err.detail) : `렌더링 서버 오류 (${renderRes.status})`);
+        }
+        const renderData = await renderRes.json();
+
+        statusEl.textContent = '완료되었습니다!';
+        downloadEl.href = renderData.download_url;
+        downloadEl.style.display = 'inline-block';
+      } catch (e) {
+        statusEl.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
