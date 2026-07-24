@@ -72,34 +72,6 @@
       return t;
     }
 
-    // Claude 응답에 앞뒤로 설명 문구나 남은 코드펜스가 섞여 있어도,
-    // 중괄호 깊이를 직접 세어서 "완전한 JSON 객체 한 덩어리"만 정확히 잘라낸다.
-    function extractJsonObject(text) {
-      const start = text.indexOf('{');
-      if (start === -1) {
-        throw new Error('응답에서 JSON 객체를 찾을 수 없습니다. 모델이 형식을 지키지 않은 것 같아요.');
-      }
-      let depth = 0;
-      let inString = false;
-      let escape = false;
-      for (let i = start; i < text.length; i++) {
-        const ch = text[i];
-        if (inString) {
-          if (escape) { escape = false; }
-          else if (ch === '\\') { escape = true; }
-          else if (ch === '"') { inString = false; }
-          continue;
-        }
-        if (ch === '"') { inString = true; continue; }
-        if (ch === '{') depth++;
-        else if (ch === '}') {
-          depth--;
-          if (depth === 0) return text.slice(start, i + 1);
-        }
-      }
-      throw new Error('JSON 객체가 끝까지 안 왔어요 — 응답이 중간에 잘렸을 수 있습니다 (max_tokens를 늘려보세요).');
-    }
-
     async function callClaudeDirectly(apiKey, systemPrompt, model, maxTokens, passageText, targetGrammar) {
       const lines = ['다음 지문을 분석해줘 (지문 번호: 1):'];
       if (targetGrammar && targetGrammar.trim()) {
@@ -131,16 +103,11 @@
       }
 
       const data = await res.json();
-
-      if (data.stop_reason === 'max_tokens') {
-        throw new Error('응답이 max_tokens 한도에 걸려 중간에 잘렸습니다. cfg.max_tokens 값을 늘려주세요.');
-      }
-
       const rawText = data.content
         .filter(b => b.type === 'text')
         .map(b => b.text)
         .join('');
-      return JSON.parse(extractJsonObject(stripCodeFence(rawText)));
+      return JSON.parse(stripCodeFence(rawText));
     }
 
     btn.addEventListener('click', async () => {
