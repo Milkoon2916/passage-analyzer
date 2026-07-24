@@ -332,6 +332,12 @@
     <div class="step-body">
       <div class="step-title">영어 지문 입력</div>
       <div class="step-desc">분석할 지문을 그대로 붙여넣으세요.</div>
+
+      <label class="field-label" style="max-width:140px;">지문 번호</label>
+      <input type="number" id="passageIndex" min="1" step="1" value="1" style="max-width:100px;">
+      <div class="field-note">분석이 끝날 때마다 자동으로 +1 됩니다. 직접 바꿔도 돼요.</div>
+
+      <label class="field-label" style="margin-top:16px;">지문 내용</label>
       <textarea id="passage" placeholder="영어 지문을 여기에 붙여넣으세요..."></textarea>
     </div>
   </div>
@@ -362,13 +368,22 @@
   <script>
     const KEY_STORAGE = "passage-analyzer-gemini-api-key";
     const MODEL_STORAGE = "passage-analyzer-gemini-model";
+    const PASSAGE_INDEX_STORAGE = "passage-analyzer-passage-index";
     const apiKeyEl = document.getElementById('apiKey');
     const toggleKeyEl = document.getElementById('toggleKey');
     const modelSelectEl = document.getElementById('modelSelect');
+    const passageIndexEl = document.getElementById('passageIndex');
     const passageEl = document.getElementById('passage');
     const btn = document.getElementById('btn');
     const statusEl = document.getElementById('status');
     const downloadEl = document.getElementById('download');
+
+    // 저장된 지문 번호 불러오기
+    const savedIndex = localStorage.getItem(PASSAGE_INDEX_STORAGE);
+    if (savedIndex) passageIndexEl.value = savedIndex;
+    passageIndexEl.addEventListener('input', () => {
+      localStorage.setItem(PASSAGE_INDEX_STORAGE, passageIndexEl.value);
+    });
 
     // 저장된 키/모델 선택 불러오기
     apiKeyEl.value = localStorage.getItem(KEY_STORAGE) || '';
@@ -392,8 +407,8 @@
       return t;
     }
 
-    async function callGeminiDirectly(apiKey, systemPrompt, model, maxTokens, passageText, targetGrammar) {
-      const lines = ['다음 지문을 분석해줘 (지문 번호: 1):'];
+    async function callGeminiDirectly(apiKey, systemPrompt, model, maxTokens, passageText, passageIndex, targetGrammar) {
+      const lines = [`다음 지문을 분석해줘 (지문 번호: ${passageIndex}):`];
       if (targetGrammar && targetGrammar.trim()) {
         lines.push(`목표 어법: ${targetGrammar.trim()}`);
       }
@@ -439,6 +454,7 @@
     btn.addEventListener('click', async () => {
       const apiKey = apiKeyEl.value.trim();
       const passage = passageEl.value.trim();
+      const passageIndex = parseInt(passageIndexEl.value, 10) || 1;
       const targetGrammar = document.getElementById('targetGrammar').value;
 
       if (!apiKey) { statusEl.textContent = 'Google API 키를 입력해주세요.'; return; }
@@ -456,7 +472,7 @@
         statusEl.textContent = 'AI가 지문을 분석하고 있습니다… (20~90초 정도 걸릴 수 있어요)';
         const selectedModel = modelSelectEl.value;
         const analysis = await callGeminiDirectly(
-          apiKey, cfg.system_prompt, selectedModel, cfg.max_tokens, passage, targetGrammar
+          apiKey, cfg.system_prompt, selectedModel, cfg.max_tokens, passage, passageIndex, targetGrammar
         );
 
         statusEl.textContent = 'PDF로 렌더링하는 중...';
@@ -474,6 +490,10 @@
         statusEl.textContent = '완료되었습니다!';
         downloadEl.href = renderData.download_url;
         downloadEl.style.display = 'inline-block';
+
+        // 다음 지문을 위해 번호 자동 증가
+        passageIndexEl.value = passageIndex + 1;
+        localStorage.setItem(PASSAGE_INDEX_STORAGE, passageIndexEl.value);
       } catch (e) {
         statusEl.textContent = '오류: ' + e.message;
       } finally {
