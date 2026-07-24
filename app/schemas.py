@@ -54,7 +54,7 @@ class Note(BaseModel):
 class Sentence(BaseModel):
     num: int
     badge: Optional[Literal["topic", "insert", "target"]] = None  # 주제문 / 문장삽입 / 목표 어법
-    tokens: list[Token]
+    tokens: list[Token] = Field(min_length=1)
     translation: str  # 자연스러운 한글 번역 (직역 아님)
     notes: list[Note] = Field(default_factory=list)
 
@@ -70,10 +70,10 @@ class PassageAnalysis(BaseModel):
     title_kr: str
     passage_index: int = 1
     target_grammar: Optional[str] = None  # 사용자가 지정한 목표 어법 (예: "가정법 도치, 분사구문")
-    sentences: list[Sentence]
+    sentences: list[Sentence] = Field(min_length=1)
     summary: Summary
 
 
 # Claude에게 요구할 최종 JSON의 최상위 형태 (여러 지문을 한 번에 받을 수도 있게)
 class AnalysisResponse(BaseModel):
-    passages: list[PassageAnalysis]
+    passages: list[PassageAnalysis] = Field(min_length=1)
