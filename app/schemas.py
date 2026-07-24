@@ -1,5 +1,5 @@
 """
-Claude API가 반환해야 하는 구조화된 분석 결과의 스키마.
+Gemini API가 반환해야 하는 구조화된 분석 결과의 스키마.
 스킬(passage-analysis-pdf)의 references/format-guide.md 규칙을 데이터 구조로 옮긴 것.
 
 핵심 설계 원칙: Claude에게 자유 형식 HTML을 직접 만들게 하지 않고,
