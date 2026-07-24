@@ -19,8 +19,8 @@ if STATIC_DIR.exists():
 OUTPUT_DIR = Path(tempfile.gettempdir()) / "passage-analyzer-outputs"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-MAX_TOKENS = 20000  # Sonnet 5 동기 API 한도는 128K. adaptive thinking이 기본으로 켜져있어
-                     # (thinking + 응답 텍스트가 이 budget을 공유) 지문이 길면 이 값을 더 올리세요.
+MAX_TOKENS = 20000  # Gemini 2.5 Pro의 출력 토큰 한도는 넉넉한 편이지만,
+                     # 지문이 길어서 JSON이 잘리면 이 값을 더 올리세요.
 
 
 class PromptConfigResponse(BaseModel):
@@ -31,7 +31,7 @@ class PromptConfigResponse(BaseModel):
 
 @app.get("/prompt-config", response_model=PromptConfigResponse)
 def prompt_config():
-    """브라우저가 Claude API를 '직접' 호출할 때 쓸 시스템 프롬프트/모델명을 공개 제공.
+    """브라우저가 Gemini API를 '직접' 호출할 때 쓸 시스템 프롬프트/모델명을 공개 제공.
     API 키는 서버에 전혀 없음 -- 사용자가 자기 키로 브라우저에서 바로 호출한다."""
     return PromptConfigResponse(
         system_prompt=build_system_prompt(),
@@ -47,7 +47,7 @@ class RenderResponse(BaseModel):
 
 @app.post("/render", response_model=RenderResponse)
 def render(analysis: AnalysisResponse):
-    """브라우저에서 이미 Claude로 분석까지 마친 JSON만 받아서 PDF로 렌더링한다.
+    """브라우저에서 이미 Gemini로 분석까지 마친 JSON만 받아서 PDF로 렌더링한다.
     이 엔드포인트는 LLM을 호출하지 않으므로 API 키가 전혀 필요 없다 -- 공개해도 비용 위험 없음."""
     job_id = str(uuid.uuid4())
     pdf_path = OUTPUT_DIR / f"{job_id}.pdf"
