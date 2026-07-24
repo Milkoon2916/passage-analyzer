@@ -4,7 +4,7 @@
 """
 from .schemas import AnalysisResponse
 
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-3.1-flash-lite"
 
 SYSTEM_PROMPT = """당신은 한국 수능/CSAT 영어 독해 지문을 분석하는 전문 튜터입니다.
 주어진 영어 지문을 문장 단위로 분석하여, 아래 JSON 스키마에 정확히 맞는 결과만 반환하세요.
