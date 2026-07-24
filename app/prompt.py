@@ -7,7 +7,6 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .prompt import build_system_prompt, MODEL
 from .schemas import AnalysisResponse
 from .render import render_pdf
 
