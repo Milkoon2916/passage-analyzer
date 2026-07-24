@@ -17,6 +17,15 @@ class Token(BaseModel):
     tag_class: Optional[Literal["g", "v", "gv"]] = None  # type == "tag"일 때만
     caption: Optional[str] = None  # type == "tag"일 때만, 2-6자 한글 캡션
 
+    @field_validator("tag_class", mode="before")
+    @classmethod
+    def _fallback_unknown_tag_class(cls, v):
+        # Gemini가 가끔 type 값("hl", "conn" 등)을 tag_class에 잘못 넣는 경우가 있어,
+        # 전체 렌더링이 깨지지 않도록 알 수 없는 값은 "g"로 안전하게 대체한다.
+        if v is not None and v not in {"g", "v", "gv"}:
+            return "g"
+        return v
+
 
 _VALID_NOTE_CATEGORIES = {"comprehension", "grammar", "blank", "writing", "implication", "theme"}
 
