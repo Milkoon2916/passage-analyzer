@@ -65,6 +65,14 @@ class Summary(BaseModel):
     background: str    # 배경지식 4-7문장
 
 
+class VocabItem(BaseModel):
+    """지문에서 뽑은 핵심 어휘 1개. 유의어/반의어 표에 들어가는 한 행."""
+    word: str                        # 지문에 쓰인 원형 그대로의 영어 단어/표현
+    meaning: str                     # 문맥에 맞는 한글 뜻
+    synonym: Optional[str] = None    # 유의어 (영어, 콤마로 여러 개 가능). 마땅한 게 없으면 null
+    antonym: Optional[str] = None    # 반의어 (영어, 콤마로 여러 개 가능). 마땅한 게 없으면 null
+
+
 class PassageAnalysis(BaseModel):
     title_en: str
     title_kr: str
@@ -72,6 +80,8 @@ class PassageAnalysis(BaseModel):
     target_grammar: Optional[str] = None  # 사용자가 지정한 목표 어법 (예: "가정법 도치, 분사구문")
     sentences: list[Sentence] = Field(min_length=1)
     summary: Summary
+    vocabulary: list[VocabItem] = Field(min_length=5)  # 유의어/반의어 표. 필수 (최소 5개) -- Gemini가
+                                                          # 빼먹지 못하도록 default를 두지 않음
 
 
 # Claude에게 요구할 최종 JSON의 최상위 형태 (여러 지문을 한 번에 받을 수도 있게)
