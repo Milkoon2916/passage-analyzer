@@ -69,6 +69,13 @@ MOCK_DATA = {
                 "flow": "상황 변화 → 조치 결정 → 제한 안내 → 대안 제시 → 문의 및 안내",
                 "background": "전염병 유행 시 공동주택/실버타운에서의 방역 조치에 관한 글로, 수능 독해에서 자주 출제되는 주제야.",
             },
+            "vocabulary": [
+                {"word": "development", "meaning": "(새로운) 상황, 사태", "synonym": "situation, occurrence", "antonym": None},
+                {"word": "epidemic", "meaning": "유행병, 전염병", "synonym": "outbreak", "antonym": None},
+                {"word": "minimize", "meaning": "최소화하다", "synonym": "reduce, lessen", "antonym": "maximize"},
+                {"word": "urgent", "meaning": "긴급한", "synonym": "pressing, immediate", "antonym": "trivial"},
+                {"word": "measure", "meaning": "조치", "synonym": "step, action", "antonym": None},
+            ],
         }
     ]
 }
