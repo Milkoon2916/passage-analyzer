@@ -407,7 +407,7 @@
       return t;
     }
 
-    async function callGeminiDirectly(apiKey, systemPrompt, model, maxTokens, passageText, passageIndex, targetGrammar) {
+    async function callGeminiDirectly(apiKey, systemPrompt, model, maxTokens, passageText, passageIndex, targetGrammar, responseJsonSchema) {
       const lines = [`다음 지문을 분석해줘 (지문 번호: ${passageIndex}):`];
       if (targetGrammar && targetGrammar.trim()) {
         lines.push(`목표 어법: ${targetGrammar.trim()}`);
@@ -429,6 +429,8 @@
           generationConfig: {
             maxOutputTokens: maxTokens,
             responseMimeType: 'application/json',
+            // 텍스트 설명이 아니라 실제 스키마로 강제 -- vocabulary 같은 필수 필드 누락 방지
+            responseJsonSchema: responseJsonSchema,
           },
         }),
       });
@@ -472,7 +474,7 @@
         statusEl.textContent = 'AI가 지문을 분석하고 있습니다… (20~90초 정도 걸릴 수 있어요)';
         const selectedModel = modelSelectEl.value;
         const analysis = await callGeminiDirectly(
-          apiKey, cfg.system_prompt, selectedModel, cfg.max_tokens, passage, passageIndex, targetGrammar
+          apiKey, cfg.system_prompt, selectedModel, cfg.max_tokens, passage, passageIndex, targetGrammar, cfg.response_json_schema
         );
 
         statusEl.textContent = 'PDF로 렌더링하는 중...';
