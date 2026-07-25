@@ -28,16 +28,20 @@ class PromptConfigResponse(BaseModel):
     system_prompt: str
     model: str
     max_tokens: int
+    response_json_schema: dict
 
 
 @app.get("/prompt-config", response_model=PromptConfigResponse)
 def prompt_config():
-    """브라우저가 Claude API를 '직접' 호출할 때 쓸 시스템 프롬프트/모델명을 공개 제공.
-    API 키는 서버에 전혀 없음 -- 사용자가 자기 키로 브라우저에서 바로 호출한다."""
+    """브라우저가 Gemini API를 '직접' 호출할 때 쓸 시스템 프롬프트/모델명/강제 스키마를 공개 제공.
+    API 키는 서버에 전혀 없음 -- 사용자가 자기 키로 브라우저에서 바로 호출한다.
+    response_json_schema는 Gemini의 responseJsonSchema 필드에 그대로 넣어서, 텍스트 설명이 아니라
+    실제 스키마 강제로 vocabulary 같은 필드가 누락되지 않게 한다."""
     return PromptConfigResponse(
         system_prompt=build_system_prompt(),
         model=MODEL,
         max_tokens=MAX_TOKENS,
+        response_json_schema=AnalysisResponse.model_json_schema(),
     )
 
 
