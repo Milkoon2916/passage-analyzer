@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from .prompt import build_system_prompt, MODEL
 from .schemas import AnalysisResponse
 from .render import render_pdf
+from .thesaurus import enrich_vocabulary
 
 app = FastAPI(title="영어 지문 구문분석 자동 생성기")
 STATIC_DIR = Path(__file__).parent.parent / "static"
@@ -27,16 +28,20 @@ class PromptConfigResponse(BaseModel):
     system_prompt: str
     model: str
     max_tokens: int
+    response_json_schema: dict
 
 
 @app.get("/prompt-config", response_model=PromptConfigResponse)
 def prompt_config():
-    """브라우저가 Claude API를 '직접' 호출할 때 쓸 시스템 프롬프트/모델명을 공개 제공.
-    API 키는 서버에 전혀 없음 -- 사용자가 자기 키로 브라우저에서 바로 호출한다."""
+    """브라우저가 Gemini API를 '직접' 호출할 때 쓸 시스템 프롬프트/모델명/강제 스키마를 공개 제공.
+    API 키는 서버에 전혀 없음 -- 사용자가 자기 키로 브라우저에서 바로 호출한다.
+    response_json_schema는 Gemini의 responseJsonSchema 필드에 그대로 넣어서, 텍스트 설명이 아니라
+    실제 스키마 강제로 vocabulary 같은 필드가 누락되지 않게 한다."""
     return PromptConfigResponse(
         system_prompt=build_system_prompt(),
         model=MODEL,
         max_tokens=MAX_TOKENS,
+        response_json_schema=AnalysisResponse.model_json_schema(),
     )
 
 
@@ -48,7 +53,11 @@ class RenderResponse(BaseModel):
 @app.post("/render", response_model=RenderResponse)
 def render(analysis: AnalysisResponse):
     """브라우저에서 이미 Claude로 분석까지 마친 JSON만 받아서 PDF로 렌더링한다.
-    이 엔드포인트는 LLM을 호출하지 않으므로 API 키가 전혀 필요 없다 -- 공개해도 비용 위험 없음."""
+    이 엔드포인트는 LLM을 호출하지 않으므로 API 키가 전혀 필요 없다 -- 공개해도 비용 위험 없음.
+    렌더링 전에 유의어/반의어를 Datamuse 사전으로 검증·보강한다 (역시 키 불필요)."""
+    for p in analysis.passages:
+        enrich_vocabulary(p)
+
     job_id = str(uuid.uuid4())
     pdf_path = OUTPUT_DIR / f"{job_id}.pdf"
     render_pdf(analysis, str(pdf_path))
